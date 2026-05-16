@@ -1,10 +1,10 @@
-# inst377-week13-Frutify-fa26
+# inst377-week13-Frutifier-fa26
 Week 13 - Vercel app for INST377
 
-Title: Frutify
+Title: Frutifier
 
 
-Description of target browsers (iOS? Android? Which ones?):
+Description of target browsers (iOS? Android? Which ones?): All
 
 Link to Developer Manual
 Developer Manual (bottom half of your README.md) - 15pts
