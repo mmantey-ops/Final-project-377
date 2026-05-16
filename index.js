@@ -1,74 +1,90 @@
+require('dotenv').config();
+
 const express = require('express');
-const bodyParser = require('body-parser');
-const supabaseClient = require('@supabase/supabase-js');
-const { isValidStateAbbreviation } = require('usa-state-validator');
-const dotenv = require('dotenv');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const port = 3000;
-dotenv.config();
 
-app.use(bodyParser.json());
-app.use(express.static(__dirname + '/public'));
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const supabase = supabaseClient.createClient(supabaseUrl, supabaseKey);
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+const PORT = process.env.PORT || 3000;
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 app.get('/', (req, res) => {
-  res.sendFile('public/Customers.html', { root: __dirname });
+  res.json({
+    message: 'Fruit Info Backend Running'
+  });
 });
 
-app.get('/customers', async (req, res) => {
-  console.log('Attempting to get all customers!');
+app.get('/favorites', async (req, res) => {
+  try{
+    const{ data, error } = await supabase
+    .from('favorites')
+    .select('*');
 
-  const { data, error } = await supabase.from('customer').select();
+    if (error) throw error;
 
-  if (error) {
-    console.log(`Error: ${error}`);
-    res.statusCode = 500;
-    res.send(error);
-  } else {
-    console.log('Recieved Data:', data.length);
     res.json(data);
-  }
-});
 
-app.post('/customer', async (req, res) => {
-  console.log('Adding Customer');
-  console.log(`Request: ${JSON.stringify(req.body)}`);
-
-  const firstName = req.body.firstName;
-  const lastName = req.body.lastName;
-  const state = req.body.state;
-
-  if (!isValidStateAbbreviation(state)) {
-    console.log(`State: ${state} is invalid`);
-    res.statusCode = 400;
-    res.json({
-      message: `${state} is not a valid 2 Letter Abbreviation for State`,
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
     });
-    return;
-  }
-
-  const { data, error } = await supabase
-    .from('customer')
-    .insert({
-      customer_first_name: firstName,
-      customer_last_name: lastName,
-      customer_state: state,
-    })
-    .select();
-
-  if (error) {
-    console.log(`Error: ${error}`);
-    res.statusCode = 500;
-    res.send(error);
-  } else {
-    res.json(data);
   }
 });
 
-app.listen(port, () => {
-  console.log(`App is available on port: ${port}`);
+app.post('/favorites', async (req, res) => {
+  try{
+    const {fruit_name} = req.body;
+
+    const {data, error} = await supabase
+     .from('favorites')
+     .insert([
+      {
+        fruit_name: fruit_name
+      }
+     ])
+     .select();
+
+     if (error) throw error;
+
+     res.status(201).json({
+      message: 'Fruit added',
+      data: data
+     });
+    
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+app.get('/fruit/:name', async (req, res) => {
+  try{
+    const fruitName = req.params.name;
+    const response = await fetch(
+      `https://fruityvice.com/api/fruit/${fruitName}`
+    );
+
+    const data = await response.json();
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
